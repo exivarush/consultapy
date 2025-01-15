@@ -1,5 +1,6 @@
-      const vocationShort = vocationMap[member.vocation] || member.vocation;
-      const colorClass = colorMap[vocationShort] || "";
+const BASE_URL = "https://api.tibiadata.com/v4";
+const vocationShort = vocationMap[member.vocation] || member.vocation;
+const colorClass = colorMap[vocationShort] || "";
 
       const memberDiv = document.createElement("div");
       memberDiv.classList.add("character", colorClass, "bold");
