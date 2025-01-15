@@ -1,103 +1,45 @@
-const BASE_URL = "https://api.tibiadata.com/v4";
-
-// Função para buscar membros online da guild
-async function fetchGuildMembers(guildName) {
-  const url = `${BASE_URL}/guild/${encodeURIComponent(guildName)}`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error("Erro ao buscar informações da guild.");
-    }
+async function consultarGuild() {
+    const guildName = document.getElementById('guildName').value;
+    const response = await fetch(`https://api.tibiadata.com/v4/guild/${encodeURIComponent(guildName)}`);
     const data = await response.json();
-    const members = data.guild.members.flatMap(group => group.online_status.filter(member => member.status === "online"));
-    return members;
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
+    const membros = data.guild.members;
+    const resultados = document.getElementById('resultados');
+    resultados.innerHTML = '';
+
+    membros.filter(membro => membro.status === 'online')
+        .sort((a, b) => b.level - a.level)
+        .forEach(membro => {
+            const div = document.createElement('div');
+            div.className = `${membro.vocation.replace(' ', '')} bold`;
+            div.textContent = `${membro.name} - ${membro.level} - ${membro.vocation.replace('Royal Paladin', 'RP').replace('Elder Druid', 'ED').replace('Elite Knight', 'EK').replace('Master Sorcerer', 'MS')}`;
+            resultados.appendChild(div);
+        });
 }
 
-// Função para buscar mortes do personagem
-async function fetchCharacterDeaths(characterName) {
-  const url = `${BASE_URL}/character/${encodeURIComponent(characterName)}`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error("Erro ao buscar informações do personagem.");
+async function filtrarMortes() {
+    const levelMin = document.getElementById('levelMin').value;
+    const levelMax = document.getElementById('levelMax').value;
+    const vocation = document.getElementById('vocation').value;
+    const resultados = document.getElementById('resultados').children;
+    const mortes = document.getElementById('mortes');
+    mortes.innerHTML = '';
+
+    for (let i = 0; i < resultados.length; i++) {
+        const membro = resultados[i].textContent.split(' - ');
+        const nome = membro[0];
+        const level = parseInt(membro[1]);
+        const vocacao = membro[2];
+
+        if ((levelMin === '' || level >= levelMin) && (levelMax === '' || level <= levelMax) && (vocation === '' || vocacao === vocation)) {
+            const response = await fetch(`https://api.tibiadata.com/v4/character/${encodeURIComponent(nome)}`);
+            const data = await response.json();
+            const mortesPersonagem = data.character.deaths.filter(morte => new Date(morte.time) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+
+            mortesPersonagem.forEach(morte => {
+                const div = document.createElement('div');
+                div.textContent = `${nome} - Level ${morte.level} - ${morte.reason}`;
+                mortes.appendChild(div);
+            });
+        }
     }
-    const data = await response.json();
-    const today = new Date();
-    const last30Days = new Date(today.setDate(today.getDate() - 30));
-
-    const deaths = data.characters.deaths.filter(death => {
-      const deathDate = new Date(death.time);
-      return deathDate >= last30Days;
-    });
-    return deaths;
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
 }
-
-// Atualizar lista de membros online no HTML
-function updateMembersList(members) {
-  const membersList = document.getElementById("membersList");
-  membersList.innerHTML = "";
-  const vocationColors = {
-    "Royal Paladin": "vocation-rp",
-    "Elder Druid": "vocation-ed",
-    "Elite Knight": "vocation-ek",
-    "Master Sorcerer": "vocation-ms"
-  };
-  members.sort((a, b) => b.level - a.level).forEach(member => {
-    const li = document.createElement("li");
-    li.className = vocationColors[member.vocation] || "";
-    li.innerHTML = `<strong>${member.name}</strong> - Level: ${member.level} - Vocação: ${member.vocation}`;
-    membersList.appendChild(li);
-  });
-}
-
-// Atualizar resultados filtrados
-function updateFilterResults(members) {
-  const filterResults = document.getElementById("filterResults");
-  filterResults.innerHTML = "";
-  members.forEach(async member => {
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${member.name}</strong> - Level: ${member.level}`;
-    const deaths = await fetchCharacterDeaths(member.name);
-    if (deaths.length > 0) {
-      const deathList = document.createElement("ul");
-      deathList.className = "death-info";
-      deaths.forEach(death => {
-        const deathItem = document.createElement("li");
-        deathItem.textContent = `Level: ${death.level}, Razão: ${death.reason}`;
-        deathList.appendChild(deathItem);
-      });
-      li.appendChild(deathList);
-    }
-    filterResults.appendChild(li);
-  });
-}
-
-// Manipular o formulário de busca da guild
-document.getElementById("guildForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const guildName = document.getElementById("guildName").value.trim();
-  const members = await fetchGuildMembers(guildName);
-  updateMembersList(members);
-});
-
-// Manipular o formulário de filtro
-document.getElementById("filterForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const minLevel = parseInt(document.getElementById("minLevel").value) || 0;
-  const vocation = document.getElementById("vocation").value;
-
-  const filteredMembers = Array.from(document.getElementById("membersList").children).filter(li => {
-    const level = parseInt(li.innerHTML.match(/Level: (\d+)/)[1]);
-    const voc = li.innerHTML.match(/Vocação: (\w+)/)[1];
-    return level >= minLevel && (vocation === "" || voc === vocation);
-  });
-  updateFilterResults(filteredMembers);
-});
