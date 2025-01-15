@@ -1,6 +1,36 @@
-const BASE_URL = "https://api.tibiadata.com/v4";
-const vocationShort = vocationMap[member.vocation] || member.vocation;
-const colorClass = colorMap[vocationShort] || "";
+async function searchGuild() {
+  const guildName = document.getElementById("guildName").value.trim();
+  if (!guildName) {
+    alert("Por favor, insira o nome da guild.");
+    return;
+  }
+
+  const url = `https://api.tibiadata.com/v4/guild/${encodeURIComponent(guildName)}`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erro ao buscar guild: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const membersOnline = data.guild.members
+      .flatMap(member => member.characters)
+      .filter(char => char.status === "online")
+      .sort((a, b) => b.level - a.level);
+
+    const membersDiv = document.getElementById("members");
+    membersDiv.innerHTML = ""; // Limpa os resultados anteriores
+
+    const vocationMap = {
+      "Royal Paladin": "RP",
+      "Elder Druid": "ED",
+      "Elite Knight": "EK",
+      "Master Sorcerer": "MS",
+    };
+
+    membersOnline.forEach(member => {
+      const vocationShort = vocationMap[member.vocation] || member.vocation;
+      const colorClass = vocationShort;
 
       const memberDiv = document.createElement("div");
       memberDiv.classList.add("character", colorClass, "bold");
@@ -38,6 +68,10 @@ async function filterDeaths() {
 
     try {
       const response = await fetch(`https://api.tibiadata.com/v4/character/${encodeURIComponent(name)}`);
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar personagem ${name}: ${response.statusText}`);
+      }
+
       const data = await response.json();
       const { deaths } = extractRelevantData(data);
 
