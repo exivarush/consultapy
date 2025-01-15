@@ -1,68 +1,97 @@
-import asyncio
-import datetime
-import aiohttp
-from aiohttp import ClientSession
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consulta de Guilds e Mortes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input, select, button {
+      margin-bottom: 15px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    .vocation-rp {
+      color: orange;
+      font-weight: bold;
+    }
+    .vocation-ed {
+      color: blue;
+      font-weight: bold;
+    }
+    .vocation-ek {
+      color: black;
+      font-weight: bold;
+    }
+    .vocation-ms {
+      color: brown;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .death-info {
+      margin-left: 20px;
+      font-size: 14px;
+      color: gray;
+    }
+  </style>
+</head>
+<body>
+  <h1>Consulta de Guilds</h1>
+  <form id="guildForm">
+    <label for="guildName">Nome da Guild:</label>
+    <input type="text" id="guildName" required>
+    <button type="submit">Buscar Guild</button>
+  </form>
+  <div id="onlineMembers">
+    <h2>Membros Online</h2>
+    <ul id="membersList"></ul>
+  </div>
 
-BASE_URL = "https://api.tibiadata.com/v4"
+  <h2>Filtrar Integrantes</h2>
+  <form id="filterForm">
+    <label for="minLevel">Level Mínimo:</label>
+    <input type="number" id="minLevel" min="0">
+    <label for="vocation">Vocação:</label>
+    <select id="vocation">
+      <option value="">Todas</option>
+      <option value="RP">RP</option>
+      <option value="ED">ED</option>
+      <option value="EK">EK</option>
+      <option value="MS">MS</option>
+    </select>
+    <button type="submit">Filtrar</button>
+  </form>
+  <div id="filteredResults">
+    <h2>Resultados do Filtro</h2>
+    <ul id="filterResults"></ul>
+  </div>
 
-# Obter membros online da guild
-async def fetch_guild_members(session: ClientSession, guild_name: str):
-    url = f"{BASE_URL}/guild/{guild_name}"
-    async with session.get(url) as response:
-        if response.status != 200:
-            print(f"Erro ao buscar guild: {response.status}")
-            return None
-        data = await response.json()
-        members = data.get("guild", {}).get("members", [])
-        return [m for m in members if m.get("status") == "online"]
-
-# Obter mortes do personagem
-async def fetch_character_deaths(session: ClientSession, character_name: str):
-    url = f"{BASE_URL}/character/{character_name}"
-    async with session.get(url) as response:
-        if response.status != 200:
-            print(f"Erro ao buscar personagem: {response.status}")
-            return None
-        data = await response.json()
-        deaths = data.get("characters", {}).get("deaths", [])
-        # Filtrar mortes nos últimos 30 dias
-        today = datetime.datetime.now()
-        last_30_days = today - datetime.timedelta(days=30)
-        return [d for d in deaths if datetime.datetime.fromisoformat(d["time"]) >= last_30_days]
-
-# Função principal
-async def main():
-    guild_name = input("Digite o nome da guild: ").strip().lower()
-    async with aiohttp.ClientSession() as session:
-        members = await fetch_guild_members(session, guild_name)
-        if not members:
-            print("Nenhum membro online encontrado.")
-            return
-
-        print("Membros online:")
-        for member in sorted(members, key=lambda m: m["level"], reverse=True):
-            vocation = member["vocation"]
-            abbreviation = {"Royal Paladin": "RP", "Elder Druid": "ED", "Elite Knight": "EK", "Master Sorcerer": "MS"}.get(vocation, vocation)
-            print(f"{member['name']} - Level: {member['level']} - Vocação: {abbreviation}")
-
-        # Filtrar por level e vocação
-        min_level = int(input("Digite o level mínimo para filtrar: ") or 0)
-        vocation_filter = input("Digite a vocação para filtrar (RP, ED, EK, MS ou deixe em branco): ").strip().upper()
-        
-        filtered_members = [
-            member for member in members
-            if member["level"] >= min_level and (vocation_filter == "" or abbreviation == vocation_filter)
-        ]
-        print("\nResultados do filtro:")
-        for member in filtered_members:
-            print(f"{member['name']} - Level: {member['level']} - Vocação: {abbreviation}")
-            deaths = await fetch_character_deaths(session, member["name"])
-            if deaths:
-                print("Mortes nos últimos 30 dias:")
-                for death in deaths:
-                    print(f" - Level: {death['level']}, Razão: {death['reason']}")
-            else:
-                print("Nenhuma morte registrada.")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+  <script src="consulta.js"></script>
+</body>
+</html>
