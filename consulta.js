@@ -10,8 +10,9 @@ async function consultarGuild() {
         .sort((a, b) => b.level - a.level)
         .forEach(membro => {
             const div = document.createElement('div');
-            div.className = `${membro.vocation.replace(' ', '')} bold`;
-            div.textContent = `${membro.name} - ${membro.level} - ${membro.vocation.replace('Royal Paladin', 'RP').replace('Elder Druid', 'ED').replace('Elite Knight', 'EK').replace('Master Sorcerer', 'MS')}`;
+            const vocacao = membro.vocation.replace('Royal Paladin', 'RP').replace('Elder Druid', 'ED').replace('Elite Knight', 'EK').replace('Master Sorcerer', 'MS');
+            div.className = `${vocacao} bold`;
+            div.textContent = `${membro.name} - ${membro.level} - ${vocacao}`;
             resultados.appendChild(div);
         });
 }
@@ -37,9 +38,12 @@ async function filtrarMortes() {
 
             mortesPersonagem.forEach(morte => {
                 const div = document.createElement('div');
-                div.textContent = `${nome} - Level ${morte.level} - ${morte.reason}`;
+                div.className = `${vocacao} bold`;
+                div.textContent = `${nome} - Level ${morte.level} - ${morte.reason} - ${new Date(morte.time).toLocaleString()}`;
                 mortes.appendChild(div);
             });
         }
     }
+}
+
 }
